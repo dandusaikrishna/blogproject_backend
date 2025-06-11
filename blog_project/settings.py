@@ -65,9 +65,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'blog_project.wsgi.application'
 
 
-# CORS_ALLOWED_ORIGINS = [
-#     'http://localhost:5173',
-# ]
+CORS_ALLOWED_ORIGINS = []
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
