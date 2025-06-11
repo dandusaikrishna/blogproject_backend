@@ -1,17 +1,3 @@
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
-from .models import Blog
-from .serializers import BlogSerializer, UserSerializer
-from .permissions import IsAuthorOrReadOnly
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import BlogSerializerWithoutImage
-from django.db import models
-from django.shortcuts import get_object_or_404
-from rest_framework import pagination
-
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,8 +7,10 @@ from .models import Blog
 from .serializers import BlogSerializer, UserSerializer, BlogSerializerWithoutImage, BlogWithEmailSerializer
 from .permissions import IsAuthorOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import BlogSerializerWithoutImage
+from django.db import models
 from django.shortcuts import get_object_or_404
-
+from rest_framework import pagination
 
 
 # User registration view
