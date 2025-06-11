@@ -74,7 +74,7 @@ WSGI_APPLICATION = 'blog_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mysql.connector.django',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('railway'),
         'USER': os.getenv('root'),
         'PASSWORD': os.getenv('rHnZelrlaYlVsyDReCQYomCNLIDgOtsZ'),
