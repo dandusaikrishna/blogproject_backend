@@ -80,13 +80,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('MYSQLDATABASE', 'railway'),  # Fixed!
         'USER': os.getenv('MYSQLUSER', 'root'),         # Fixed!
-        'PASSWORD': os.getenv('MYSQLPASSWORD', 'rHnZelrlaYlVsyDReCQYomCNLIDgOtsZ'),  # Fixed!
+        'PASSWORD': os.getenv('MYSQLPASSWORD', 'gPkcVShRKBzjxVUHetxJQrWEKWRQuDPg'),  # Fixed!
         'HOST': os.getenv('MYSQLHOST', 'mysql.railway.internal'),  # Fixed!
         'PORT': os.getenv('MYSQLPORT', '3306'),         # Fixed!
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
     }
 }
 
