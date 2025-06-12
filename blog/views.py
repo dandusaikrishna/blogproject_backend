@@ -1,3 +1,17 @@
+from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from .models import Blog
+from .serializers import BlogSerializer, UserSerializer
+from .permissions import IsAuthorOrReadOnly
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import BlogSerializerWithoutImage
+from django.db import models
+from django.shortcuts import get_object_or_404
+from rest_framework import pagination
+
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,10 +21,8 @@ from .models import Blog
 from .serializers import BlogSerializer, UserSerializer, BlogSerializerWithoutImage, BlogWithEmailSerializer
 from .permissions import IsAuthorOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import BlogSerializerWithoutImage
-from django.db import models
 from django.shortcuts import get_object_or_404
-from rest_framework import pagination
+
 
 
 # User registration view
@@ -71,14 +83,26 @@ class LogoutUser(APIView):
     def post(self, request):
         logout(request)
         return Response({'message': 'Logout successful'})
-
-# Blog list and create view
+    
 class BlogListCreateView(generics.ListCreateAPIView):
     queryset = Blog.objects.all().order_by('-created_at')
     serializer_class = BlogSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        GET requests (list) - Allow any user (public access)
+        POST requests (create) - Require authentication
+        """
+        if self.request.method == 'GET':
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        
+        return [permission() for permission in permission_classes]
     
     def list(self, request, *args, **kwargs):
+        """List all blogs - accessible to everyone"""
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response({
@@ -86,16 +110,110 @@ class BlogListCreateView(generics.ListCreateAPIView):
             "posts": serializer.data
         })
         
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """Create a new blog - requires authentication"""
+        if not request.user.is_authenticated:
+            return Response({
+                'success': False,
+                'error': 'Authentication required to create a blog'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author=request.user)
+            return Response({
+                'success': True,
+                'message': 'Blog created successfully',
+                'blog': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 # Blog detail, update, delete view
 class BlogDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Blog.objects.all()
     serializer_class = BlogSerializer
-    permission_classes = [IsAuthorOrReadOnly]
-
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        GET requests (retrieve) - Allow any user (public access)
+        PUT/PATCH/DELETE requests - Require user to be author
+        """
+        if self.request.method == 'GET':
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [IsAuthorOrReadOnly]
+        
+        return [permission() for permission in permission_classes]
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve a single blog - accessible to everyone"""
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response({
+                'success': True,
+                'blog': serializer.data
+            })
+        except Blog.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    def update(self, request, *args, **kwargs):
+        """Update a blog - requires authentication and ownership"""
+        if not request.user.is_authenticated:
+            return Response({
+                'success': False,
+                'error': 'Authentication required to update a blog'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        instance = self.get_object()
+        if instance.author != request.user:
+            return Response({
+                'success': False,
+                'error': 'You can only edit your own blogs'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Blog updated successfully',
+                'blog': serializer.data
+            })
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete a blog - requires authentication and ownership"""
+        if not request.user.is_authenticated:
+            return Response({
+                'success': False,
+                'error': 'Authentication required to delete a blog'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        instance = self.get_object()
+        if instance.author != request.user:
+            return Response({
+                'success': False,
+                'error': 'You can only delete your own blogs'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        instance.delete()
+        return Response({
+            'success': True,
+            'message': 'Blog deleted successfully'
+        }, status=status.HTTP_204_NO_CONTENT)
+        
 
 class BlogsByEmailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
